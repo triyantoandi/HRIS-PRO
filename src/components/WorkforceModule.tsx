@@ -74,6 +74,8 @@ export const WorkforceModule: React.FC<WorkforceModuleProps> = ({
   const [selectedUser360, setSelectedUser360] = useState<User | null>(null);
   const [isEditing360, setIsEditing360] = useState(false);
   const [activeTab360, setActiveTab360] = useState<'profile' | 'hierarchy' | 'salary' | 'docs'>('profile');
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [deleteSuccessToast, setDeleteSuccessToast] = useState<string | null>(null);
 
   // Edit Employee State
   const [editFormData, setEditFormData] = useState<Partial<User>>({});
@@ -517,13 +519,9 @@ export const WorkforceModule: React.FC<WorkforceModuleProps> = ({
                             </button>
                             {canDelete && (
                               <button
-                                onClick={() => {
-                                  if (confirm(`Yakin ingin menghapus data karyawan ${user.name}?`)) {
-                                    onDeleteEmployee(user.id);
-                                  }
-                                }}
-                                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition cursor-pointer"
-                                title="Hapus Karyawan"
+                                onClick={() => setUserToDelete(user)}
+                                className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 hover:text-rose-700 transition cursor-pointer"
+                                title="Hapus Data Karyawan"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -950,15 +948,30 @@ export const WorkforceModule: React.FC<WorkforceModuleProps> = ({
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setIsEditing360(!isEditing360)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
-                    isEditing360 ? 'bg-emerald-500 text-slate-950' : 'bg-white/10 hover:bg-white/20 text-white'
-                  }`}
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  <span>{isEditing360 ? 'Mode Lihat' : 'Edit Data Karyawan'}</span>
-                </button>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing360(!isEditing360)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                      isEditing360 ? 'bg-emerald-500 text-slate-950' : 'bg-white/10 hover:bg-white/20 text-white'
+                    }`}
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    <span>{isEditing360 ? 'Mode Lihat' : 'Edit Data Karyawan'}</span>
+                  </button>
+
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => setUserToDelete(selectedUser360)}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 border border-rose-500/30 cursor-pointer"
+                      title="Hapus Karyawan"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Hapus</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Tab navigation */}
@@ -1458,6 +1471,103 @@ export const WorkforceModule: React.FC<WorkforceModuleProps> = ({
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* MODAL: Konfirmasi Hapus Karyawan In-App */}
+      {userToDelete && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 border border-slate-200">
+            <div className="bg-rose-600 text-white p-5 flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <Trash2 className="w-5 h-5 text-white" />
+                <h3 className="font-bold text-sm">Konfirmasi Hapus Data Karyawan</h3>
+              </div>
+              <button
+                onClick={() => setUserToDelete(null)}
+                className="p-1 text-rose-100 hover:text-white rounded-lg cursor-pointer transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              {currentUser.id === userToDelete.id ? (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 space-y-2">
+                  <div className="flex items-center space-x-2 font-bold text-sm">
+                    <Shield className="w-4 h-4 text-amber-600" />
+                    <span>Proteksi Akun Aktif</span>
+                  </div>
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    Anda sedang login menggunakan akun <strong>{userToDelete.name}</strong>. Anda tidak dapat menghapus akun Super Admin yang sedang aktif digunakan.
+                  </p>
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      onClick={() => setUserToDelete(null)}
+                      className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl cursor-pointer"
+                    >
+                      Tutup
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center space-x-3 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+                    <img
+                      src={userToDelete.avatar}
+                      alt={userToDelete.name}
+                      className="w-12 h-12 rounded-full object-cover ring-2 ring-slate-200 shrink-0"
+                    />
+                    <div>
+                      <h4 className="font-extrabold text-sm text-slate-900">{userToDelete.name}</h4>
+                      <p className="text-slate-600 font-semibold">{userToDelete.position}</p>
+                      <p className="text-[11px] text-slate-500 font-mono">NIP: {userToDelete.nip} • {userToDelete.department}</p>
+                    </div>
+                  </div>
+
+                  <p className="text-slate-600 leading-relaxed">
+                    Apakah Anda yakin ingin menghapus data karyawan ini dari sistem? Seluruh data profil dan akses akan dihapus secara permanen dari database Firebase.
+                  </p>
+
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-end space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => setUserToDelete(null)}
+                      className="px-4 py-2.5 border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetName = userToDelete.name;
+                        const targetId = userToDelete.id;
+                        onDeleteEmployee(targetId);
+                        if (selectedUser360?.id === targetId) {
+                          setSelectedUser360(null);
+                        }
+                        setUserToDelete(null);
+                        setDeleteSuccessToast(`Data karyawan "${targetName}" berhasil dihapus dari sistem.`);
+                        setTimeout(() => setDeleteSuccessToast(null), 4000);
+                      }}
+                      className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-xs cursor-pointer transition flex items-center gap-1.5"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span>Ya, Hapus Karyawan</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Success Toast */}
+      {deleteSuccessToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-slate-700 flex items-center space-x-3 animate-in slide-in-from-bottom-5">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <span className="text-xs font-bold">{deleteSuccessToast}</span>
         </div>
       )}
 

@@ -267,33 +267,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                     </div>
                   </div>
 
-                  {/* Switch Demo Persona */}
-                  <div className="py-2">
-                    <div className="px-4 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
-                      <span>Simulasi Switch Akun & Role</span>
-                      <UserCheck className="w-3 h-3 text-emerald-600" />
+                  {/* User Profile Summary */}
+                  <div className="py-2 px-4 space-y-2 text-xs">
+                    <div className="flex justify-between py-1 border-b border-slate-50">
+                      <span className="text-slate-500">Jabatan:</span>
+                      <span className="font-semibold text-slate-800">{currentUser.position}</span>
                     </div>
-                    {allUsers.map((u) => (
-                      <button
-                        key={u.id}
-                        onClick={() => {
-                          onSwitchUser(u);
-                          setShowUserMenu(false);
-                        }}
-                        className={`w-full text-left px-4 py-2 text-xs flex items-center justify-between hover:bg-slate-50 transition cursor-pointer ${
-                          u.id === currentUser.id ? 'bg-emerald-50/70 font-bold text-emerald-800' : 'text-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2 truncate">
-                          <img src={u.avatar} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
-                          <div className="truncate">
-                            <p className="truncate font-semibold">{u.name}</p>
-                            <p className="text-[10px] text-slate-500 truncate">{getRoleDisplayName(u.role)}</p>
-                          </div>
-                        </div>
-                        {u.id === currentUser.id && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
-                      </button>
-                    ))}
+                    <div className="flex justify-between py-1 border-b border-slate-50">
+                      <span className="text-slate-500">Departemen:</span>
+                      <span className="font-semibold text-slate-800">{currentUser.department}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-50">
+                      <span className="text-slate-500">Penempatan:</span>
+                      <span className="font-semibold text-blue-900">{currentBranch.name}</span>
+                    </div>
                   </div>
 
                   <div className="border-t border-slate-100 pt-2 px-2">

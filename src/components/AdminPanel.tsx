@@ -499,16 +499,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             ))}
           </div>
 
-          {/* Interactive Geofence Radar Simulator */}
+          {/* Interactive Geofence Radar Calculator */}
           <div className="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-xs space-y-5">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
               <div>
                 <h3 className="text-base font-extrabold text-slate-900 flex items-center gap-2">
                   <Compass className="w-5 h-5 text-emerald-600" />
-                  <span>Simulator Uji Validasi Jarak Geofence (Live Tester)</span>
+                  <span>Kalkulator & Uji Validasi Jarak Geofence Mandiri</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Uji akurasi rumus perhitungan jarak (Haversine Formula) sebelum diterapkan ke seluruh karyawan.
+                  Verifikasi akurasi radius cabang dan kalkulasi jarak (Haversine Formula) secara presisi.
                 </p>
               </div>
 
@@ -532,7 +532,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               {/* Inputs */}
               <div className="space-y-4 text-xs">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Simulasi Latitude Karyawan</label>
+                  <label className="font-bold text-slate-700 block mb-1">Koordinat Latitude Uji</label>
                   <input
                     type="text"
                     value={simUserLat}
@@ -542,7 +542,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Simulasi Longitude Karyawan</label>
+                  <label className="font-bold text-slate-700 block mb-1">Koordinat Longitude Uji</label>
                   <input
                     type="text"
                     value={simUserLng}
@@ -551,32 +551,33 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (navigator.geolocation) {
+                        navigator.geolocation.getCurrentPosition((pos) => {
+                          setSimUserLat(pos.coords.latitude.toFixed(6));
+                          setSimUserLng(pos.coords.longitude.toFixed(6));
+                        });
+                      }
+                    }}
+                    className="px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl font-bold cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Navigation className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Gunakan GPS Saya</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
                       if (activeSimBranch) {
-                        // Set exact location
                         setSimUserLat(activeSimBranch.coordinates.lat.toFixed(6));
                         setSimUserLng(activeSimBranch.coordinates.lng.toFixed(6));
                       }
                     }}
                     className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer"
                   >
-                    Set Tepat di Kantor (0m)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (activeSimBranch) {
-                        // Shift latitude slightly away
-                        setSimUserLat((activeSimBranch.coordinates.lat + 0.005).toFixed(6));
-                        setSimUserLng((activeSimBranch.coordinates.lng + 0.005).toFixed(6));
-                      }
-                    }}
-                    className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold cursor-pointer"
-                  >
-                    Simulasi di Luar Kantor
+                    Titik Tengah Kantor
                   </button>
                 </div>
               </div>

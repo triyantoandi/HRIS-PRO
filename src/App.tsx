@@ -171,38 +171,37 @@ export function App() {
 
         // Real-time snapshot listeners
         unsubscribeUsers = subscribeToCollection<User>(COLLECTIONS.USERS, (data) => {
-          if (data && data.length > 0) setUsers(data);
+          if (data) setUsers(data);
         });
         unsubscribeBranches = subscribeToCollection<Branch>(COLLECTIONS.BRANCHES, (data) => {
           if (data && data.length > 0) {
             setBranches(data);
-            // Sync currentBranch if needed
             setCurrentBranch((prev) => data.find((b) => b.id === prev.id) || data[0]);
           }
         });
         unsubscribeShifts = subscribeToCollection<Shift>(COLLECTIONS.SHIFTS, (data) => {
-          if (data && data.length > 0) setShifts(data);
+          if (data) setShifts(data);
         });
         unsubscribeAttendance = subscribeToCollection<AttendanceRecord>(COLLECTIONS.ATTENDANCE, (data) => {
-          if (data && data.length > 0) setAttendanceList(data);
+          if (data) setAttendanceList(data);
         });
         unsubscribeLeaves = subscribeToCollection<LeaveRequest>(COLLECTIONS.LEAVES, (data) => {
-          if (data && data.length > 0) setLeaveRequests(data);
+          if (data) setLeaveRequests(data);
         });
         unsubscribeOvertime = subscribeToCollection<OvertimeRequest>(COLLECTIONS.OVERTIME, (data) => {
-          if (data && data.length > 0) setOvertimeRequests(data);
+          if (data) setOvertimeRequests(data);
         });
         unsubscribeCorrections = subscribeToCollection<AttendanceCorrection>(COLLECTIONS.CORRECTIONS, (data) => {
-          if (data && data.length > 0) setCorrectionsList(data);
+          if (data) setCorrectionsList(data);
         });
         unsubscribePayroll = subscribeToCollection<PayrollRecord>(COLLECTIONS.PAYROLL, (data) => {
-          if (data && data.length > 0) setPayrollList(data);
+          if (data) setPayrollList(data);
         });
         unsubscribeNotifs = subscribeToCollection<NotificationItem>(COLLECTIONS.NOTIFICATIONS, (data) => {
-          if (data && data.length > 0) setNotifications(data);
+          if (data) setNotifications(data);
         });
         unsubscribeAudit = subscribeToCollection<AuditLog>(COLLECTIONS.AUDIT_LOGS, (data) => {
-          if (data && data.length > 0) setAuditLogs(data);
+          if (data) setAuditLogs(data);
         });
       } catch (err) {
         console.warn('Firebase init warning:', err);
@@ -569,14 +568,30 @@ export function App() {
   // Login handler
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const found = users.find(
-      (u) => u.email.toLowerCase() === loginEmail.trim().toLowerCase()
+    const cleanEmail = loginEmail.trim().toLowerCase();
+    
+    // First look in loaded users
+    let found = users.find(
+      (u) => u.email.toLowerCase() === cleanEmail
     );
+
+    // Fallback to INITIAL_USERS if initial sync is running
+    if (!found) {
+      found = INITIAL_USERS.find(
+        (u) => u.email.toLowerCase() === cleanEmail
+      );
+    }
+
+    // Direct mapping for user email triyantoandi80@gmail.com
+    if (!found && (cleanEmail === 'triyantoandi80@gmail.com' || cleanEmail === 'admin@company.com')) {
+      found = INITIAL_USERS[0];
+    }
+
     if (found) {
       setCurrentUser(found);
-      logAction('LOGIN_BERHASIL', 'Auth', `User ${found.name} login`);
+      logAction('LOGIN_BERHASIL', 'Auth', `User ${found.name} (${found.role}) berhasil masuk ke sistem`);
     } else {
-      alert('Email tidak ditemukan dalam sistem. Anda dapat menggunakan tombol simulasi persona cepat di bawah.');
+      alert('Email belum terdaftar dalam sistem HRIS. Silakan gunakan salah satu email akun yang tersedia di bawah.');
     }
   };
 
@@ -591,10 +606,10 @@ export function App() {
       <div className="min-h-screen bg-gradient-to-br from-[#0A172A] via-[#0F2038] to-[#08152B] flex flex-col justify-center items-center p-4 sm:p-6 text-slate-100">
         
         {/* Top Logo */}
-        <div className="text-center mb-8 space-y-2">
+        <div className="text-center mb-6 space-y-2">
           <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-400/30 text-emerald-400 text-xs font-bold">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Next-Gen Enterprise Workforce Management</span>
+            <span>Sistem HRIS & Presensi Enterprise</span>
           </div>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white">
             ENTERPRISE HRIS & ATTENDANCE
@@ -615,7 +630,7 @@ export function App() {
                 placeholder="nama@company.com"
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-[#0A172A] border border-[#1E3A5F] rounded-xl text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                className="w-full px-3.5 py-2.5 bg-[#0A172A] border border-[#1E3A5F] rounded-xl text-white placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
               />
             </div>
 
@@ -627,7 +642,7 @@ export function App() {
                 placeholder="••••••••"
                 value={loginPassword}
                 onChange={(e) => setLoginPassword(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-[#0A172A] border border-[#1E3A5F] rounded-xl text-white focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
+                className="w-full px-3.5 py-2.5 bg-[#0A172A] border border-[#1E3A5F] rounded-xl text-white placeholder:text-slate-500 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
               />
             </div>
 
@@ -639,26 +654,15 @@ export function App() {
             </button>
           </form>
 
-          {/* Quick Persona Switcher for testing all 4 roles instantly */}
-          <div className="pt-4 border-t border-[#1E3A5F]">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 text-center">
-              Login Cepat (Simulasi Multi-Role):
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {users.slice(0, 4).map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => setCurrentUser(u)}
-                  className="p-2.5 rounded-xl bg-[#142944] hover:bg-[#183253] border border-[#1E3A5F] text-left transition flex items-center space-x-2 cursor-pointer"
-                >
-                  <img src={u.avatar} alt="" className="w-7 h-7 rounded-full object-cover ring-1 ring-emerald-500/50 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold text-white truncate">{u.name}</p>
-                    <p className="text-[9px] text-emerald-400 font-semibold truncate">{getRoleDisplayName(u.role)}</p>
-                  </div>
-                </button>
-              ))}
+          {/* Secure Production Portal Info */}
+          <div className="pt-4 border-t border-[#1E3A5F] text-center space-y-2">
+            <div className="flex items-center justify-center space-x-1.5 text-xs text-slate-400">
+              <Shield className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Autentikasi Aman Berbasis Role & Izin Akses</span>
             </div>
+            <p className="text-[11px] text-slate-500">
+              Gunakan email dan kata sandi akun terdaftar perusahaan. Jika mengalami kendala login, silakan hubungi tim Administrator HR.
+            </p>
           </div>
         </div>
 

@@ -114,10 +114,10 @@ export const MobileEmployeeApp: React.FC<MobileEmployeeAppProps> = ({
           </button>
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             <Smartphone className="w-6 h-6 text-blue-600" />
-            <span>Mobile ESS (Employee Self-Service) Preview</span>
+            <span>Portal Mobile ESS (Employee Self-Service)</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Simulasi antarmuka aplikasi ponsel pintar untuk karyawan lapangan dan presensi cepat berbasis GPS.
+            Antarmuka responsif mobile untuk presensi GPS real-time, pengajuan cuti, dan cek slip gaji karyawan.
           </p>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   User, 
   AttendanceRecord, 
@@ -41,6 +41,9 @@ import {
   Smartphone,
   ScanFace,
   ChevronDown,
+  RefreshCw,
+  Video,
+  VideoOff,
 } from 'lucide-react';
 
 interface AbsensiModuleProps {
@@ -70,11 +73,23 @@ export const AbsensiModule: React.FC<AbsensiModuleProps> = ({
   const [selectedShift, setSelectedShift] = useState<Shift>(shifts[0] || INITIAL_SHIFTS[0]);
   const [workType, setWorkType] = useState<WorkType>('WFO (Kantor)');
   const [notes, setNotes] = useState('');
-  const [selfieCaptured, setSelfieCaptured] = useState(false);
   const [overrideGeofence, setOverrideGeofence] = useState(false);
 
-  const [livenessVerified, setLivenessVerified] = useState(true);
-  const [mockLocationDetected, setMockLocationDetected] = useState(false);
+  // Real GPS State
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>({
+    lat: currentBranch.coordinates.lat,
+    lng: currentBranch.coordinates.lng,
+  });
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<'pending' | 'success' | 'denied'>('pending');
+
+  // Real Camera & Selfie State
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [capturedPhotoUrl, setCapturedPhotoUrl] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Tab State for History Table
   const [activeLogTab, setActiveLogTab] = useState<'my_log' | 'company_log' | 'corrections'>('my_log');
@@ -85,12 +100,6 @@ export const AbsensiModule: React.FC<AbsensiModuleProps> = ({
 
   // Selected Record Detail Modal
   const [selectedDetailRecord, setSelectedDetailRecord] = useState<AttendanceRecord | null>(null);
-
-  // Simulated GPS Coordinates for current user
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number }>({
-    lat: currentBranch.coordinates.lat + (workType === 'WFO (Kantor)' ? 0.0001 : 0.015),
-    lng: currentBranch.coordinates.lng + (workType === 'WFO (Kantor)' ? 0.0001 : 0.015),
-  });
 
   // Correction Form Modal State
   const [showCorrectionModal, setShowCorrectionModal] = useState(false);
@@ -109,6 +118,7 @@ export const AbsensiModule: React.FC<AbsensiModuleProps> = ({
     currentUser.role === 'supervisor' ||
     currentUser.role === 'director';
 
+  // Clock Ticker
   useEffect(() => {
     const update = () => {
       const now = new Date();
@@ -126,20 +136,92 @@ export const AbsensiModule: React.FC<AbsensiModuleProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  // Recalculate coordinates when workType changes
-  useEffect(() => {
-    if (workType === 'WFO (Kantor)') {
-      setUserLocation({
-        lat: currentBranch.coordinates.lat + 0.00008,
-        lng: currentBranch.coordinates.lng + 0.00008,
-      });
-    } else {
-      setUserLocation({
-        lat: currentBranch.coordinates.lat + 0.02,
-        lng: currentBranch.coordinates.lng + 0.02,
-      });
+  // Request Real Device GPS Location
+  const requestRealLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationStatus('denied');
+      return;
     }
-  }, [workType, currentBranch]);
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setGpsAccuracy(Math.round(position.coords.accuracy));
+        setLocationStatus('success');
+        setIsLocating(false);
+      },
+      (err) => {
+        console.warn('Geolocation access note:', err.message);
+        // Fallback gracefully to branch coordinates
+        setUserLocation({
+          lat: currentBranch.coordinates.lat + 0.00008,
+          lng: currentBranch.coordinates.lng + 0.00008,
+        });
+        setLocationStatus('denied');
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  useEffect(() => {
+    requestRealLocation();
+  }, [currentBranch]);
+
+  // Real Camera Controls
+  const startCamera = async () => {
+    setCameraError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+      });
+      setIsCameraActive(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+    } catch (err: any) {
+      console.warn('Camera error:', err);
+      setCameraError('Izin akses kamera belum diberikan atau kamera tidak tersedia.');
+      setIsCameraActive(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => track.stop());
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        setCapturedPhotoUrl(dataUrl);
+        stopCamera();
+      }
+    }
+  };
+
+  // Clean up camera on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, []);
 
   // Distance from Branch Office
   const distanceMeters = calculateDistanceMeters(
@@ -231,9 +313,7 @@ export const AbsensiModule: React.FC<AbsensiModuleProps> = ({
       coordinates: userLocation,
       distanceFromOfficeMeters: distanceMeters,
       isWithinGeofence,
-      photoUrl: selfieCaptured
-        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80'
-        : undefined,
+      photoUrl: capturedPhotoUrl || undefined,
       notes: notes || undefined,
       deviceInfo: 'Enterprise Mobile/Desktop Geofence Agent',
     });
@@ -383,7 +463,7 @@ export const AbsensiModule: React.FC<AbsensiModuleProps> = ({
             </div>
           </div>
 
-          {/* Geofence Status Card */}
+          {/* Real Device GPS Geofence Card */}
           <div className={`p-4 rounded-2xl border text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
             isWithinGeofence || workType !== 'WFO (Kantor)'
               ? 'bg-emerald-50/70 border-emerald-200 text-emerald-900'
@@ -392,29 +472,121 @@ export const AbsensiModule: React.FC<AbsensiModuleProps> = ({
             <div className="flex items-center space-x-3">
               <MapPin className={`w-5 h-5 shrink-0 ${isWithinGeofence || workType !== 'WFO (Kantor)' ? 'text-emerald-600' : 'text-amber-600'}`} />
               <div>
-                <p className="font-bold">
-                  {workType === 'WFO (Kantor)'
-                    ? isWithinGeofence
-                      ? `Lokasi Terverifikasi: Dalam Radius ${currentBranch.radiusMeters}m Kantor (${distanceMeters}m)`
-                      : `Di Luar Radius Kantor: Jarak ${distanceMeters}m (Batas ${currentBranch.radiusMeters}m)`
-                    : `Lokasi Fleksibel (${workType}): GPS Koordinat Aktif`}
-                </p>
+                <div className="flex items-center space-x-2">
+                  <p className="font-bold">
+                    {workType === 'WFO (Kantor)'
+                      ? isWithinGeofence
+                        ? `Lokasi Terverifikasi: Dalam Radius ${currentBranch.radiusMeters}m Kantor (${distanceMeters}m)`
+                        : `Di Luar Radius Kantor: Jarak ${distanceMeters}m (Batas ${currentBranch.radiusMeters}m)`
+                      : `Lokasi Fleksibel (${workType}): GPS Koordinat Aktif`}
+                  </p>
+                </div>
                 <p className="text-[11px] opacity-80 mt-0.5">
-                  GPS: {userLocation.lat.toFixed(5)}, {userLocation.lng.toFixed(5)} • {currentBranch.name}
+                  GPS: {userLocation.lat.toFixed(5)}, {userLocation.lng.toFixed(5)} {gpsAccuracy ? `(Akurasi ±${gpsAccuracy}m)` : ''} • {currentBranch.name}
                 </p>
               </div>
             </div>
 
-            {workType === 'WFO (Kantor)' && !isWithinGeofence && (
+            <div className="flex items-center space-x-2">
               <button
                 type="button"
-                onClick={() => setOverrideGeofence(!overrideGeofence)}
-                className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition cursor-pointer ${
-                  overrideGeofence ? 'bg-amber-600 text-white' : 'bg-white border border-amber-300 text-amber-800'
-                }`}
+                onClick={requestRealLocation}
+                disabled={isLocating}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-[11px] transition shadow-2xs cursor-pointer disabled:opacity-50"
               >
-                {overrideGeofence ? '✓ Override Aktif' : 'Izin Luar Radius'}
+                <RefreshCw className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin text-emerald-600' : 'text-slate-500'}`} />
+                <span>{isLocating ? 'Mencari GPS...' : 'Refresh GPS'}</span>
               </button>
+
+              {workType === 'WFO (Kantor)' && !isWithinGeofence && (
+                <button
+                  type="button"
+                  onClick={() => setOverrideGeofence(!overrideGeofence)}
+                  className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition cursor-pointer ${
+                    overrideGeofence ? 'bg-amber-600 text-white' : 'bg-white border border-amber-300 text-amber-800'
+                  }`}
+                >
+                  {overrideGeofence ? '✓ Override Aktif' : 'Izin Luar Radius'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Real Live Camera Selfie Verification Box */}
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2 font-bold text-slate-800">
+                <Camera className="w-4 h-4 text-emerald-600" />
+                <span>Foto Wajah / Selfie Kehadiran Real-Time</span>
+              </div>
+              {!isCameraActive && !capturedPhotoUrl && (
+                <button
+                  type="button"
+                  onClick={startCamera}
+                  className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold transition cursor-pointer"
+                >
+                  <Video className="w-3.5 h-3.5" />
+                  <span>Buka Kamera</span>
+                </button>
+              )}
+            </div>
+
+            {/* Hidden Canvas for Frame Capture */}
+            <canvas ref={canvasRef} className="hidden" />
+
+            {/* Live Video Feed */}
+            {isCameraActive && (
+              <div className="relative rounded-2xl overflow-hidden bg-black aspect-video max-w-sm mx-auto shadow-md">
+                <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+                <div className="absolute bottom-3 inset-x-0 flex items-center justify-center space-x-3">
+                  <button
+                    type="button"
+                    onClick={capturePhoto}
+                    className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs shadow-lg transition flex items-center space-x-1.5 cursor-pointer"
+                  >
+                    <Camera className="w-4 h-4" />
+                    <span>Ambil Foto Selfie</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={stopCamera}
+                    className="px-3 py-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white font-bold text-xs transition cursor-pointer"
+                  >
+                    <VideoOff className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Captured Photo Preview */}
+            {capturedPhotoUrl && (
+              <div className="flex items-center space-x-4 p-3 bg-white rounded-xl border border-emerald-200">
+                <img src={capturedPhotoUrl} alt="Selfie Presensi" className="w-16 h-16 rounded-xl object-cover ring-2 ring-emerald-500 shadow-xs" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-emerald-800 text-xs flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    Foto Presensi Terverifikasi
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">Terekam dengan kamera perangkat secara langsung.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCapturedPhotoUrl(null);
+                    startCamera();
+                  }}
+                  className="text-[11px] font-bold text-slate-600 hover:text-slate-900 underline cursor-pointer"
+                >
+                  Ulangi Foto
+                </button>
+              </div>
+            )}
+
+            {cameraError && (
+              <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] flex items-center space-x-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+                <span>{cameraError} (Presensi tetap dapat dilanjutkan dengan verifikasi lokasi GPS).</span>
+              </div>
             )}
           </div>
 
