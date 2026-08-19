@@ -1,0 +1,6 @@
+{
+  "name": "HR System & Dashboard",
+  "description": "Sistem Enterprise HRIS & Workforce Management lengkap dengan Presensi Geofencing GPS, Payroll Otomatis (BPJS/PPh 21), Manajemen Cuti & Lembur SPL, Shift Roster, Multi-Branch, dan RBAC.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

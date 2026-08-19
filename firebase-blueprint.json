@@ -1,0 +1,144 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Employee and user profile entity in the HRIS system",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 128 },
+        "nickname": { "type": "string", "maxLength": 64 },
+        "role": { "type": "string", "maxLength": 32 },
+        "avatar": { "type": "string", "maxLength": 512 },
+        "position": { "type": "string", "maxLength": 128 },
+        "department": { "type": "string", "maxLength": 128 },
+        "branchId": { "type": "string", "maxLength": 64 },
+        "branchName": { "type": "string", "maxLength": 128 },
+        "nip": { "type": "string", "maxLength": 64 },
+        "phone": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["id", "email", "name", "role", "position", "department", "nip"]
+    },
+    "AttendanceRecord": {
+      "title": "AttendanceRecord",
+      "description": "Daily clock in and clock out log with geofence verification",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userName": { "type": "string", "maxLength": 128 },
+        "userNip": { "type": "string", "maxLength": 64 },
+        "department": { "type": "string", "maxLength": 128 },
+        "branchId": { "type": "string", "maxLength": 64 },
+        "branchName": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 32 },
+        "shiftId": { "type": "string", "maxLength": 64 },
+        "shiftName": { "type": "string", "maxLength": 128 },
+        "clockInTime": { "type": "string", "maxLength": 32 },
+        "clockOutTime": { "type": "string", "maxLength": 32 },
+        "status": { "type": "string", "maxLength": 32 },
+        "lateMinutes": { "type": "number" },
+        "earlyLeaveMinutes": { "type": "number" },
+        "workType": { "type": "string", "maxLength": 64 },
+        "location": { "type": "string", "maxLength": 256 },
+        "isWithinGeofence": { "type": "boolean" },
+        "notes": { "type": "string", "maxLength": 512 }
+      },
+      "required": ["id", "userId", "userName", "userNip", "date", "clockInTime", "status", "workType"]
+    },
+    "LeaveRequest": {
+      "title": "LeaveRequest",
+      "description": "Leave, permit, and medical certificate request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userName": { "type": "string", "maxLength": 128 },
+        "userNip": { "type": "string", "maxLength": 64 },
+        "department": { "type": "string", "maxLength": 128 },
+        "leaveType": { "type": "string", "maxLength": 64 },
+        "startDate": { "type": "string", "maxLength": 32 },
+        "endDate": { "type": "string", "maxLength": 32 },
+        "daysCount": { "type": "number" },
+        "reason": { "type": "string", "maxLength": 512 },
+        "status": { "type": "string", "maxLength": 32 },
+        "appliedDate": { "type": "string", "maxLength": 32 },
+        "attachmentName": { "type": "string", "maxLength": 256 },
+        "emergencyPhone": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["id", "userId", "userName", "leaveType", "startDate", "endDate", "daysCount", "reason", "status"]
+    },
+    "Branch": {
+      "title": "Branch",
+      "description": "Company branch office location and geofence configuration",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 128 },
+        "code": { "type": "string", "maxLength": 32 },
+        "address": { "type": "string", "maxLength": 256 },
+        "city": { "type": "string", "maxLength": 64 },
+        "radiusMeters": { "type": "number" }
+      },
+      "required": ["id", "name", "code", "address", "city", "radiusMeters"]
+    },
+    "Shift": {
+      "title": "Shift",
+      "description": "Working shift schedule policy",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 128 },
+        "code": { "type": "string", "maxLength": 32 },
+        "startTime": { "type": "string", "maxLength": 16 },
+        "endTime": { "type": "string", "maxLength": 16 },
+        "gracePeriodMinutes": { "type": "number" },
+        "color": { "type": "string", "maxLength": 32 }
+      },
+      "required": ["id", "name", "code", "startTime", "endTime"]
+    },
+    "SystemSettings": {
+      "title": "SystemSettings",
+      "description": "Company global settings and HR policies",
+      "type": "object",
+      "properties": {
+        "companyName": { "type": "string", "maxLength": 128 },
+        "legalName": { "type": "string", "maxLength": 128 },
+        "companyNpwp": { "type": "string", "maxLength": 64 },
+        "companyAddress": { "type": "string", "maxLength": 256 },
+        "workingDaysPerMonth": { "type": "number" },
+        "lateToleranceMinutes": { "type": "number" },
+        "geofenceRadiusMeters": { "type": "number" },
+        "taxCalculationMethod": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["companyName", "legalName", "workingDaysPerMonth", "lateToleranceMinutes", "geofenceRadiusMeters"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Stores user and employee accounts"
+    },
+    "/attendance/{attendanceId}": {
+      "schema": { "$ref": "#/entities/AttendanceRecord" },
+      "description": "Stores attendance punch logs"
+    },
+    "/leaves/{leaveId}": {
+      "schema": { "$ref": "#/entities/LeaveRequest" },
+      "description": "Stores leave and permit requests"
+    },
+    "/branches/{branchId}": {
+      "schema": { "$ref": "#/entities/Branch" },
+      "description": "Stores company branches and geofences"
+    },
+    "/shifts/{shiftId}": {
+      "schema": { "$ref": "#/entities/Shift" },
+      "description": "Stores shift schedules"
+    },
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/SystemSettings" },
+      "description": "Stores global company system configuration"
+    }
+  }
+}

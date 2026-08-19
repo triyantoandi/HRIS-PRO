@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Default Deny All Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Public / App data collections accessible to authenticated staff & users
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    match /leaves/{leaveId} {
+      allow read: if true;
+      allow create, update, delete: if true;
+    }
+
+    match /branches/{branchId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /shifts/{shiftId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /departments/{deptId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /overtime/{overtimeId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /payroll/{payrollId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /corrections/{corrId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /notifications/{notifId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+  }
+}
